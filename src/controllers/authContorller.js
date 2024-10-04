@@ -56,4 +56,49 @@ const verifyEmail = asyncHandler(async (req, res) => {
 	res.json(new ApiResponse(200,user, "email verification successful"));
 });
 
-export { registerUser, verifyEmail };
+const loginUser = asyncHandler(async( req, res) => {
+
+	const {email, password} = req.body;
+
+	const user = await User.findOne({email})
+
+	if(!user) throw new ApiError(400, "user not found")
+
+		const isPasswordMatched = await user.checkPassword(password)
+
+		console.log(isPasswordMatched);
+		
+
+		if(!isPasswordMatched) throw new ApiError(401, "Invalid user credential")
+
+			if(user.isBanned) throw new ApiError(401, "User is banned")
+			if(!user.isVerified) throw new ApiError(401, "User is not verified")
+			
+
+		const token = user.generateAccessToken()
+
+		const option = {
+			httpOnly: true,
+			secure: true,
+		};
+
+		res
+		.status(200)
+		.cookie("accessToken", token, option)
+		.json(new ApiResponse(200, user, "Login successful"))
+})
+
+const logoutUser = asyncHandler(async(req, res) => {
+	
+	const option = {
+		httpOnly: true,
+		secure: true
+	}
+
+	res
+	.status(200)
+	.clearCookie("accessToken")
+	.json(new ApiResponse(200, {}, "Logout successful"))
+})
+
+export { registerUser, verifyEmail, loginUser, logoutUser };
